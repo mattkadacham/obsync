@@ -6,7 +6,7 @@
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "build": "tsc -noEmit -skipLibCheck && node esbuild.config.mjs --production",
-    "dev": "tsc -noEmit -skipLibCheck && node esbuild.config.mjs -v \"C:/dev/notes/\" -w"
+    "dev": "tsc -noEmit -skipLibCheck && node esbuild.config.mjs -v \"C:/dev/test-vault/\" -w"
   },
   "repository": {
     "type": "git",

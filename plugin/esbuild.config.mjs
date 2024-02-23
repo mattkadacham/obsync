@@ -45,9 +45,12 @@ const copyPlugin = {
             }
 
             const filepath = path.join(options.vault, ".obsidian", "plugins", "obsync")
-            if (!fs.existsSync(filepath)) {
-                fs.mkdirSync(filepath);
+            if (fs.existsSync(filepath)) {
+                fs.rmdirSync(filepath, { recursive: true });
             }
+
+            fs.mkdirSync(filepath, { recursive: true });
+
             const handleErr = err => err && console.error(err);
             fs.copyFile('main.js', path.join(filepath, 'main.js'), handleErr);
             fs.copyFile('manifest.json', path.join(filepath, 'manifest.json'), handleErr);
