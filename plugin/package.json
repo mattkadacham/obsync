@@ -10,14 +10,14 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/mattkadacham/obsync-obsidian-plugin.git"
+    "url": "git+https://github.com/mattkadacham/obsync.git"
   },
   "author": "",
   "license": "ISC",
   "bugs": {
-    "url": "https://github.com/mattkadacham/obsync-obsidian-plugin/issues"
+    "url": "https://github.com/mattkadacham/obsync/issues"
   },
-  "homepage": "https://github.com/mattkadacham/obsync-obsidian-plugin#readme",
+  "homepage": "https://github.com/mattkadacham/obsync#readme",
   "devDependencies": {
     "@types/node": "^20.11.20",
     "builtin-modules": "^3.3.0",
