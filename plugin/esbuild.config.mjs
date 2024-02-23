@@ -1,6 +1,10 @@
 import esbuild from "esbuild";
 import process from "process";
 import builtins from "builtin-modules";
+import fs from 'fs';
+import path from 'path';
+import args from 'command-line-args';
+
 
 const banner =
     `/*
@@ -9,7 +13,44 @@ if you want to view the source, please visit the github repository of this plugi
 */
 `;
 
-const prod = (process.argv[2] === "production");
+const optionDefinitions = [
+    {
+        name: 'production',
+        alias: 'p',
+        type: Boolean,
+        defaultValue: false,
+    },
+    {
+        name: 'vault',
+        alias: 'v',
+        type: String,
+    },
+    {
+        name: 'watch',
+        alias: 'w',
+        type: Boolean,
+        defaultValue: false,
+    }
+];
+
+const options = args(optionDefinitions);
+const prod = options.production;
+
+const copyPlugin = {
+    name: 'copy-plugin',
+    setup(build) {
+        build.onEnd(result => {
+            const filepath = path.join(options.vault, ".obsidian", "plugins", "obsync")
+            if (!fs.existsSync(filepath)) {
+                fs.mkdirSync(filepath);
+            }
+            const handleErr = err => err && console.error(err);
+            fs.copyFile('main.js', path.join(filepath, 'main.js'), handleErr);
+            fs.copyFile('manifest.json', path.join(filepath, 'manifest.json'), handleErr);
+            fs.copyFile('styles.css', path.join(filepath, 'styles.css'), handleErr);
+        });
+    }
+}
 
 const context = await esbuild.context({
     banner: {
@@ -38,6 +79,7 @@ const context = await esbuild.context({
     sourcemap: prod ? false : "inline",
     treeShaking: true,
     outfile: "main.js",
+    plugins: !!options.vault ? [copyPlugin] : []
 });
 
 if (prod) {

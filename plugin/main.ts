@@ -16,6 +16,8 @@ export default class ObsyncPlugin extends Plugin {
 
         // Configure resources needed by the plugin.
         console.log('loaded plugin!!');
+        console.log('aaaa');
+        console.log("bbbb");
     }
     async onunload() {
         // Release any resources configured by the plugin.
