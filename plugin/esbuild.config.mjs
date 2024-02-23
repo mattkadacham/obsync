@@ -40,6 +40,10 @@ const copyPlugin = {
     name: 'copy-plugin',
     setup(build) {
         build.onEnd(result => {
+            if (!fs.existsSync(options.vault)) {
+                throw new Error("Vault path does not exist");
+            }
+
             const filepath = path.join(options.vault, ".obsidian", "plugins", "obsync")
             if (!fs.existsSync(filepath)) {
                 fs.mkdirSync(filepath);
