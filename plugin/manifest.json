@@ -1,0 +1,11 @@
+{
+    "id": "obsync-obsidian-plugin",
+    "name": "Obsync",
+    "version": "1.0.0",
+    "minAppVersion": "0.15.0",
+    "description": "Sync notes with a private server.",
+    "author": "matt.kadacham",
+    "authorUrl": "",
+    "fundingUrl": "",
+    "isDesktopOnly": false
+}
