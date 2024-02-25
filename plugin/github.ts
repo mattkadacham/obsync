@@ -78,11 +78,10 @@ export async function github(settings: Readonly<GithubClientSettings>): Promise<
             owner: settings.owner,
             repo: settings.repo,
             path,
-            message: 'updated ${path}',
+            message: `updated ${path}`,
             content: Buffer.from(content).toString('base64'),
             branch: settings.branch || 'main',
             sha: sha || undefined
-            // ...(mode === 'update' ? { sha } : {})
         })
             .then((i) => Result.Ok(i.data.content?.sha || ''))
             .catch(e => Result.Err<string>(e.message));

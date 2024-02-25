@@ -49,22 +49,39 @@ const write = (vault: Vault, path: string, content: string) => {
     );
 }
 
+const read = async (path: string, vault: Vault) => {
+    const content = await vault.read(path);
+    if (content.type === NONE) throw new Error('file not found');
+    return content;
+}
+
+const remoteFile = async (path: string, g: Github) => {
+    const githubContent = await g.getSingle(path);
+    if (githubContent.type === ERR) throw new Error(githubContent.err);
+    return githubContent.value;
+}
+
+type ShaMismatch = { path: string, content: string, sha: string };
+
+const shaMismatch = async (path: string, remote: { [name: string]: string }, vault: Vault, g: Github): Promise<ShaMismatch | null> => {
+    const content = await read(path, vault);
+    const sha = g.hash(content.value);
+    if (remote[path] && sha === remote[path]) return null;
+    const githubContent = await remoteFile(path, g);
+    if (sha === githubContent.sha) return null;
+    return { path, content: content.value, sha: githubContent.sha };
+}
+
 const send = async (g: Github, filepaths: string[], remote: { [name: string]: string }, vault: Vault) => {
     let count = 0;
     let updates: { [name: string]: string } = {};
-    for (const filepath of filepaths) {
-        const content = await vault.read(filepath);
-        if (content.type === NONE) throw new Error('file not found');
-        const sha = g.hash(content.value);
-        if (remote[filepath] && sha === remote[filepath]) continue;
-        const githubContent = await g.getSingle(filepath);
-        if (githubContent.type === ERR) throw new Error(githubContent.err);
-        if (sha === githubContent.value.sha) continue;
-
-        const result = await g.createOrUpdate(filepath, content.value, githubContent.value.sha);
+    const modified = await Promise.all(filepaths.map(f => shaMismatch(f, remote, vault, g)));
+    const files = modified.filter(i => !!i) as ShaMismatch[];
+    for (const f of files) {
+        const result = await g.createOrUpdate(f.path, f.content, f.sha);
         if (result.type == ERR) throw new Error('error');
         count++;
-        updates[filepath] = result.value;
+        updates[f.path] = result.value;
     }
     if (count > 0) new Notice('Changes saved in github!');
     return updates;
@@ -95,7 +112,7 @@ export default class ObsyncPlugin extends Plugin {
                 this.timeout = null;
                 const res = await send(this.github, this.state.modifiedFiles, this.state.remote, this.vault);
                 resolve(res);
-            }, 7 * 1000);
+            }, 3 * 1000);
         })
     }
 

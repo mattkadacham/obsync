@@ -54,7 +54,6 @@ const copyPlugin = {
             fs.copyFile('main.js', path.join(filepath, 'main.js'), handleErr);
             fs.copyFile('manifest.json', path.join(filepath, 'manifest.json'), handleErr);
             fs.copyFile('styles.css', path.join(filepath, 'styles.css'), handleErr);
-            fs.copyFile('obsync.pem', path.join(filepath, 'obsync.pem'), handleErr);
         });
     }
 }
