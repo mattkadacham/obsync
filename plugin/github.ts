@@ -75,7 +75,7 @@ export type Github = {
 export async function github(
     settings: Readonly<GithubClientSettings>
 ): Promise<Github> {
-    const client = await connect(settings.rsa);
+    const client = await connect(settings);
     const state = await githubState(client, settings);
     let q: GBlob[][] = [];
 
@@ -189,8 +189,8 @@ const getInstallation = async (owner: string, repo: string, token: string) => {
 
 export type GithubClient = Awaited<ReturnType<typeof connect>>;
 
-export const connect = async (rsa: string) => {
-    const privateKeyPkcs8 = createPrivateKey(rsa)
+export const connect = async (settings: GithubClientSettings) => {
+    const privateKeyPkcs8 = createPrivateKey(settings.rsa)
         .export({
             type: "pkcs8",
             format: "pem",
@@ -202,8 +202,8 @@ export const connect = async (rsa: string) => {
     });
 
     const installation = await getInstallation(
-        "mattkadacham",
-        "test-vault",
+        settings.owner,
+        settings.repo,
         token
     );
     const installationId = installation.id;
