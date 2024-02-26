@@ -50,6 +50,8 @@ export const ERR = Symbol("err");
 
 export type Result<T> = {
     map: <Z>(f: (v: T) => Z) => Result<Z>;
+    bind: <Z>(f: (v: T) => Result<Z>) => Result<Z>;
+    bindAsync: <Z>(f: (v: T) => Promise<Result<Z>>) => Promise<Result<Z>>;
 } & ({ value: T; type: typeof OK } | { err: string; type: typeof ERR });
 
 
@@ -68,9 +70,31 @@ export namespace Result {
             }
         };
 
+        const bind = <Z>(f: (v: X) => Result<Z>) => {
+            try {
+                return f(value);
+            } catch (e) {
+                return Err<Z>((e as Error).message ?? "error");
+            }
+        }
+
+        const bindAsync = async <Z>(f: (v: X) => Promise<Result<Z>>) => {
+            try {
+                return await f(value);
+            } catch (e) {
+                return Err<Z>((e as Error).message ?? "error");
+            }
+        }
+
+        const funcs = {
+            map,
+            bind,
+            bindAsync
+        }
+
         return (err || !value)
-            ? { map, err, type: ERR }
-            : { map, value, type: OK };
+            ? { ...funcs, err, type: ERR }
+            : { ...funcs, value, type: OK };
     };
 
     export const toOption = <X>(r: Result<X>): Option<X> => {
