@@ -3,7 +3,7 @@
     "name": "Obsync",
     "version": "1.0.0",
     "minAppVersion": "0.15.0",
-    "description": "Sync notes with a private server.",
+    "description": "Sync notes with a github repo.",
     "author": "matt.kadacham",
     "authorUrl": "",
     "fundingUrl": "",
