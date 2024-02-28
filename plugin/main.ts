@@ -74,9 +74,7 @@ export default class ObsyncPlugin extends Plugin {
     createIndicator() {
         this.statusIndicator = this.addStatusBarItem();
         this.statusIndicator.hide();
-        this.statusIndicator.createEl("span", {
-            text: "Hello from the status bar 👋",
-        });
+        this.statusIndicator.createEl("span", {});
     }
 
     showIndicator(text: string) {
