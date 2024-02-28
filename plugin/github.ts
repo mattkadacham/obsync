@@ -2,8 +2,6 @@ import { App } from "octokit";
 import axios from "axios";
 import githubAppJwt from "universal-github-app-jwt";
 import { createHash, createPrivateKey } from "crypto";
-import { Result, Option } from "func";
-import { Notice } from "obsidian";
 
 export type GithubClientSettings = {
     owner: string;
@@ -69,7 +67,8 @@ export type Github = {
         getContent: (path: string) => Promise<string>
     ) => Promise<GBlob[]>;
     pull: (prevTree: Repo) => Promise<GFile[]>;
-    commit: (tree: GBlob[]) => Promise<{ sha: string; tree: Repo }>;
+    stage: (tree: GBlob[]) => void;
+    commit: () => Promise<{ sha: string; tree: Repo }>;
 };
 
 export async function github(
@@ -92,17 +91,7 @@ export async function github(
         return res;
     }
 
-    async function commit(blobs: GBlob[]) {
-        if (blobs.length === 0)
-            return {
-                sha: state.sha(),
-                tree: state.tree(),
-            };
-
-        if (blobs.length > 0) {
-            q.push(blobs);
-        }
-
+    async function commit() {
         const files = q.shift();
 
         if (!files) {
@@ -112,29 +101,21 @@ export async function github(
             };
         }
 
-        try {
-            const latest = await getRef(client, settings);
-            const treeData = await createTree(client, settings, latest, files);
-            const newCommit = await createCommit(
-                client,
-                settings,
-                summary(files.map((t) => t.path)),
-                treeData.data.sha,
-                latest
-            );
-            await updateRef(client, settings, newCommit.data.sha);
-            const tree = await getTree(client, settings, newCommit.data.sha);
+        const latest = await getRef(client, settings);
+        const treeData = await createTree(client, settings, latest, files);
+        const commitMessage = summary(files.map((t) => t.path));
+        const newCommit = await createCommit(
+            client,
+            settings,
+            commitMessage,
+            treeData.data.sha,
+            latest
+        );
+        await updateRef(client, settings, newCommit.data.sha);
+        const tree = await getTree(client, settings, newCommit.data.sha);
 
-            state.refresh(newCommit.data.sha, tree);
-            return { sha: newCommit.data.sha, tree };
-        } catch (error) {
-            // Handle or throw the error appropriately
-            throw new Error(`Commit operation failed: ${error.message}`);
-        } finally {
-            if (q.length > 0) {
-                return commit([]);
-            }
-        }
+        state.refresh(newCommit.data.sha, tree);
+        return { sha: newCommit.data.sha, tree };
     }
 
     return {
@@ -143,6 +124,7 @@ export async function github(
         getFile: (path: string) => getFile(client, settings, path),
         latestCommit: () => getRef(client, settings),
         commit,
+        stage: (tree: GBlob[]) => q.push(tree),
         pull,
         buildTree: (getContent) =>
             buildTree(

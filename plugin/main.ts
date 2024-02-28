@@ -47,20 +47,50 @@ export default class ObsyncPlugin extends Plugin {
     github: Github;
     timeout: NodeJS.Timeout | null;
     state: ObsyncState;
+    statusIndicator: HTMLElement;
 
     async onload() {
         this.vault = vault(this.app);
         const data = await this.loadState();
         this.state = data ? { ...DEFAULTS, ...data } : { ...DEFAULTS };
+        this.createIndicator();
         this.addSettingTab(new ObsyncSettingTab(this.app, this));
         if (this.isInitialised(data)) {
             console.log("not initialised properly", data);
             return;
         }
-        this.github = await github(data.settings);
-        await this.github.pull(data.tree);
-        this.updateState(data.sha, data.tree);
+
+        this.github = await github(this.state.settings);
+        this.pull(this.state.tree);
         this.subscribe();
+
+        this.addCommand({
+            id: "obsync-pull",
+            name: "Pull from github",
+            callback: async () => await this.pull(this.state.tree),
+        });
+    }
+
+    createIndicator() {
+        this.statusIndicator = this.addStatusBarItem();
+        this.statusIndicator.hide();
+        this.statusIndicator.createEl("span", {
+            text: "Hello from the status bar 👋",
+        });
+    }
+
+    showIndicator(text: string) {
+        this.statusIndicator.show();
+        this.statusIndicator.setText(text);
+    }
+
+    showFor(text: string, time: number) {
+        this.showIndicator(text);
+        setTimeout(() => this.hideIndicator(), time);
+    }
+
+    hideIndicator() {
+        this.statusIndicator.hide();
     }
 
     async onunload() {}
@@ -77,7 +107,28 @@ export default class ObsyncPlugin extends Plugin {
         return (await this.loadData()) as ObsyncState;
     }
 
-    process = async () => {
+    pull = async (tree: Repo) => {
+        this.showIndicator("Pulling from github");
+        const updatedFiles = await this.github.pull(tree);
+
+        for (const file of updatedFiles) {
+            const result = await write(this.vault, file.path, file.content);
+            if (result.type === ERR) {
+                console.error(result.err);
+                this.showFor("Error pulling from github", 3000);
+            }
+        }
+        this.showFor(`Updated ${updatedFiles.length} files`, 3000);
+        this.updateState(this.github.state.sha(), this.github.state.tree());
+        this.hideIndicator();
+    };
+
+    push = async () => {
+        const tree = await this.github.buildTree((path: string) =>
+            read(path, this.vault)
+        );
+        this.github.stage(tree);
+
         return new Promise<void>((resolve) => {
             if (this.timeout) clearTimeout(this.timeout);
             this.timeout = setTimeout(async () => {
@@ -89,17 +140,15 @@ export default class ObsyncPlugin extends Plugin {
     };
 
     async sendCommit() {
-        const tree = await this.github.buildTree((path: string) =>
-            read(path, this.vault)
-        );
-        if (tree.length === 0) {
-            return;
+        this.showIndicator("Pushing to github");
+        try {
+            const res = await this.github.commit();
+            await this.updateState(res.sha, res.tree);
+            this.hideIndicator();
+        } catch (e) {
+            console.error(e.message);
+            this.showFor("Error pushing to github", 3000);
         }
-        new Notice("Sending changes to github");
-        const res = await this.github.commit(tree);
-        await this.updateState(res.sha, res.tree);
-
-        new Notice("Changes saved in github!");
     }
 
     async setInitialised(sha: string, tree: Repo) {
@@ -127,41 +176,35 @@ export default class ObsyncPlugin extends Plugin {
 
     onCreate = async (file: TAbstractFile) => {
         this.github.state.create(file.path);
-        await this.process();
+        await this.push();
     };
 
     onModify = async (file: TAbstractFile) => {
         this.github.state.update(file.path);
-        await this.process();
+        await this.push();
     };
 
     onDelete = async (file: TAbstractFile) => {
         this.github.state.delete(file.path);
-        await this.process();
+        await this.push();
     };
 
     onRename = async (file: TAbstractFile, prev: string) => {
         this.github.state.rename(file.path, prev);
-        await this.process();
+        await this.push();
     };
 
     async initialise() {
         this.github = await github(this.state.settings);
-        new Notice("Pulling latest version of the repository");
-        const githubFiles = await this.github.pull({});
+        this.showIndicator("Pulling latest version of the repository");
+        await this.pull({});
+        await this.setInitialised(
+            this.github.state.sha(),
+            this.github.state.tree()
+        );
 
-        for (const file of githubFiles) {
-            const result = await write(this.vault, file.path, file.content);
-            if (result.type === ERR) {
-                new Notice(result.err);
-            }
-        }
-
-        const sha = this.github.state.sha();
-        const tree = this.github.state.tree();
-        await this.setInitialised(sha, tree);
-
-        new Notice("initialised! 🎉");
+        this.showIndicator("initialised! 🎉");
+        setTimeout(() => this.hideIndicator(), 2000);
 
         this.subscribe();
     }

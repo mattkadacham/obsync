@@ -97,7 +97,7 @@ export class ObsyncSettingTab extends PluginSettingTab {
                         }
                         await this.plugin
                             .initialise()
-                            .catch((e) => new Notice(e));
+                            .catch((e) => this.plugin.showFor(e, 3000));
                     })
                     .setTooltip(
                         "Initialise the plugin. This will pull the latest version of the repository and start listening for changes."
