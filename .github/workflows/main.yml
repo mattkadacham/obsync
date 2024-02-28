@@ -19,7 +19,7 @@ jobs:
 
       - name: Build plugin
         run: |
-          cd Plugin
+          cd plugin
           npm install
           npm run build
 
@@ -32,4 +32,4 @@ jobs:
           gh release create "$tag" \
             --title="$tag" \
             --draft \
-            Plugin/main.js Plugin/manifest.json Plugin/styles.css
+            plugin/main.js plugin/manifest.json plugin/styles.css
