@@ -106,7 +106,7 @@ export class ObsyncSettingTab extends PluginSettingTab {
 
         new Setting(containerEl)
             .setName("Clear state")
-            .setDesc("Clear the state of the plugin")
+            .setDesc("Clear the state of the plugin - for debugging purposes.")
             .addButton((btn) => {
                 btn.setButtonText("Clear state")
                     .onClick(async () => {
