@@ -1,6 +1,6 @@
-import { Plugin, TAbstractFile, Notice, normalizePath } from "obsidian";
+import { Plugin, TAbstractFile, debounce } from "obsidian";
 import { Github, GithubClientSettings, Repo, github } from "./github";
-import { ERR, NONE, Result, SOME } from "func";
+import { ERR, NONE, Result } from "func";
 import { vault, Vault } from "vault";
 import { ObsyncSettingTab } from "settings";
 
@@ -47,7 +47,6 @@ export type ObsyncStateUpdater = {
 export default class ObsyncPlugin extends Plugin {
     vault: Vault;
     github: Github;
-    timeout: NodeJS.Timeout | null;
     state: ObsyncState;
     statusIndicator: HTMLElement;
 
@@ -124,25 +123,15 @@ export default class ObsyncPlugin extends Plugin {
         this.hideIndicator();
     };
 
-    push = async () => {
+    push = debounce(this.sendCommit, 3000, true);
+
+    async sendCommit() {
         const tree = await this.github.buildTree((path: string) =>
             read(path, this.vault)
         );
 
         if (tree.length === 0) return;
         this.github.stage(tree);
-
-        return new Promise<void>((resolve) => {
-            if (this.timeout) clearTimeout(this.timeout);
-            this.timeout = setTimeout(async () => {
-                this.timeout = null;
-                await this.sendCommit();
-                resolve();
-            }, 3 * 1000);
-        });
-    };
-
-    async sendCommit() {
         this.showIndicator("Pushing to github");
         try {
             const res = await this.github.commit();

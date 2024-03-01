@@ -359,7 +359,8 @@ export const buildTree = async (
     getContent: (path: string) => Promise<string>,
     repo: Repo
 ): Promise<GBlob[]> => {
-    const t = [];
+    const t: GBlob[] = [];
+    if (files.length === 0) return Promise.resolve(t);
 
     for (const mod of files) {
         let sha;
