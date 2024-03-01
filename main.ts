@@ -1,12 +1,14 @@
-import { Plugin, TAbstractFile, Notice } from "obsidian";
+import { Plugin, TAbstractFile, Notice, normalizePath } from "obsidian";
 import { Github, GithubClientSettings, Repo, github } from "./github";
 import { ERR, NONE, Result, SOME } from "func";
 import { vault, Vault } from "vault";
 import { ObsyncSettingTab } from "settings";
 
-const write = (vault: Vault, path: string, content: string) => {
-    if (vault.writeConfig(path, content).type === SOME) return Result.Ok(true);
-    return vault.getFile(path).match(
+const write = async (vault: Vault, path: string, content: string) => {
+    const isCfg = await vault.writeConfig(path, content);
+    if (isCfg) return Result.Ok(true);
+
+    return await vault.getFile(path).match<Promise<Result<boolean>>>(
         () => vault.modify(path, content),
         () => vault.create(path, content).then(() => Result.Ok(true))
     );
@@ -61,7 +63,7 @@ export default class ObsyncPlugin extends Plugin {
         }
 
         this.github = await github(this.state.settings);
-        this.pull(this.state.tree);
+        await this.pull(this.state.tree);
         this.subscribe();
 
         this.addCommand({
@@ -125,6 +127,8 @@ export default class ObsyncPlugin extends Plugin {
         const tree = await this.github.buildTree((path: string) =>
             read(path, this.vault)
         );
+
+        if (tree.length === 0) return;
         this.github.stage(tree);
 
         return new Promise<void>((resolve) => {
