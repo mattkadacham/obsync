@@ -63,14 +63,15 @@ export default class ObsyncPlugin extends Plugin {
         }
 
         this.github = await github(this.state.settings);
-        await this.pull(this.state.tree);
-        this.subscribe();
 
         this.addCommand({
             id: "obsync-pull",
             name: "Pull from github",
             callback: async () => await this.pull(this.state.tree),
         });
+
+        await this.pull(this.state.tree);
+        this.subscribe();
     }
 
     createIndicator() {
